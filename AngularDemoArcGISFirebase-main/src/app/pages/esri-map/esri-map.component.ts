@@ -67,8 +67,8 @@ export class EsriMapComponent implements OnInit, OnDestroy {
   subscriptionObj: Subscription;
 
   constructor(
-    // private fbs: FirebaseService
-    private fbs: FirebaseMockService
+    private fbs: FirebaseService
+   // private fbs: FirebaseMockService
   ) { }
 
   async initializeMap() {
@@ -91,7 +91,7 @@ export class EsriMapComponent implements OnInit, OnDestroy {
         "esri/rest/support/FeatureSet"
       ]);
 
-      // esriConfig.apiKey = "MY_API_KEY";
+      esriConfig.apiKey = "AAPK9343168a6c86413ba98112f5352428fcGnGC-wp9ZqKGNe2Fd6CkQdpzfk3v1965PmDiIFqOXpovBlvEll7Q246p45ANQb_z";
 
       this._Map = Map;
       this._MapView = MapView;
@@ -114,6 +114,7 @@ export class EsriMapComponent implements OnInit, OnDestroy {
       this.addGraphicLayers();
 
       this.addPoint(this.pointCoords[1], this.pointCoords[0], true);
+      
 
       // Initialize the MapView
       const mapViewProperties = {
@@ -241,6 +242,7 @@ export class EsriMapComponent implements OnInit, OnDestroy {
     }
 
     this.addPoint(this.pointCoords[1], this.pointCoords[0], true);
+    this.fbs.syncPointItem(this.pointCoords[1], this.pointCoords[0]);
   }
 
   stopTimer() {
