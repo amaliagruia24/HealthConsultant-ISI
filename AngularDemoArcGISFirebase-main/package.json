@@ -23,6 +23,7 @@
     "@angular/platform-browser": "^14.0.0",
     "@angular/platform-browser-dynamic": "^14.0.0",
     "@angular/router": "^14.0.0",
+    "codelyzer": "^6.0.2",
     "esri-loader": "^3.3.0",
     "firebase": "^9.0.0",
     "minimist": "^1.2.5",

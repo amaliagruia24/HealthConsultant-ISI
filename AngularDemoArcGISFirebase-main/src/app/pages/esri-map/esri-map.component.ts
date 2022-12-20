@@ -18,7 +18,7 @@ import {
   ElementRef,
   OnDestroy
 } from "@angular/core";
-import { setDefaultOptions, loadModules } from 'esri-loader';
+import { setDefaultOptions, loadModules } from "esri-loader";
 import { Subscription } from "rxjs";
 import { FirebaseService, ITestItem } from "src/app/services/database/firebase";
 import { FirebaseMockService } from "src/app/services/database/firebase-mock";
@@ -53,16 +53,16 @@ export class EsriMapComponent implements OnInit, OnDestroy {
 
   // Attributes
   zoom = 10;
-  center: Array<number> = [-118.73682450024377, 34.07817583063242];
+  center: Array<number> = [26.1521, 44.4396];
   basemap = "streets-vector";
   loaded = false;
-  pointCoords: number[] = [-118.73682450024377, 34.07817583063242];
-  dir: number = 0;
-  count: number = 0;
+  pointCoords: number[] = [26.1521, 44.4396];
+  dir = 0;
+  count = 0;
   timeoutHandler = null;
 
   // firebase sync
-  isConnected: boolean = false;
+  isConnected = false;
   subscriptionList: Subscription;
   subscriptionObj: Subscription;
 
@@ -114,7 +114,7 @@ export class EsriMapComponent implements OnInit, OnDestroy {
       this.addGraphicLayers();
 
       this.addPoint(this.pointCoords[1], this.pointCoords[0], true);
-      
+
 
       // Initialize the MapView
       const mapViewProperties = {
@@ -128,8 +128,8 @@ export class EsriMapComponent implements OnInit, OnDestroy {
 
       // Fires `pointer-move` event when user clicks on "Shift"
       // key and moves the pointer on the view.
-      this.view.on('pointer-move', ["Shift"], (event) => {
-        let point = this.view.toMap({ x: event.x, y: event.y });
+      this.view.on("pointer-move", ["Shift"], (event) => {
+        const point = this.view.toMap({ x: event.x, y: event.y });
         console.log("map moved: ", point.longitude, point.latitude);
       });
 
@@ -149,7 +149,7 @@ export class EsriMapComponent implements OnInit, OnDestroy {
 
   addFeatureLayers() {
     // Trailheads feature layer (points)
-    var trailheadsLayer: __esri.FeatureLayer = new this._FeatureLayer({
+    const trailheadsLayer: __esri.FeatureLayer = new this._FeatureLayer({
       url:
         "https://services3.arcgis.com/GVgbJbqm8hXASVYi/arcgis/rest/services/Trailheads/FeatureServer/0"
     });
@@ -157,7 +157,7 @@ export class EsriMapComponent implements OnInit, OnDestroy {
     this.map.add(trailheadsLayer);
 
     // Trails feature layer (lines)
-    var trailsLayer: __esri.FeatureLayer = new this._FeatureLayer({
+    const trailsLayer: __esri.FeatureLayer = new this._FeatureLayer({
       url:
         "https://services3.arcgis.com/GVgbJbqm8hXASVYi/arcgis/rest/services/Trails/FeatureServer/0"
     });
@@ -165,7 +165,7 @@ export class EsriMapComponent implements OnInit, OnDestroy {
     this.map.add(trailsLayer, 0);
 
     // Parks and open spaces (polygons)
-    var parksLayer: __esri.FeatureLayer = new this._FeatureLayer({
+    const parksLayer: __esri.FeatureLayer = new this._FeatureLayer({
       url:
         "https://services3.arcgis.com/GVgbJbqm8hXASVYi/arcgis/rest/services/Parks_and_Open_Space/FeatureServer/0"
     });
@@ -175,8 +175,8 @@ export class EsriMapComponent implements OnInit, OnDestroy {
     console.log("feature layers added");
   }
 
-  addPoint(lat: number, lng: number, register: boolean) {   
-    const point = { //Create a point
+  addPoint(lat: number, lng: number, register: boolean) {
+    const point = { // Create a point
       type: "point",
       longitude: lng,
       latitude: lat
@@ -189,7 +189,7 @@ export class EsriMapComponent implements OnInit, OnDestroy {
         width: 1
       }
     };
-    let pointGraphic: esri.Graphic = new this._Graphic({
+    const pointGraphic: esri.Graphic = new this._Graphic({
       geometry: point,
       symbol: simpleMarkerSymbol
     });
@@ -261,7 +261,7 @@ export class EsriMapComponent implements OnInit, OnDestroy {
     this.subscriptionList = this.fbs.getChangeFeedList().subscribe((items: ITestItem[]) => {
       console.log("got new items from list: ", items);
       this.graphicsLayer.removeAll();
-      for (let item of items) {
+      for (const item of items) {
         this.addPoint(item.lat, item.lng, false);
       }
     });
