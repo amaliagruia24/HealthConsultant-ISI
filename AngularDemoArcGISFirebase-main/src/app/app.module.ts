@@ -17,12 +17,25 @@ import { MatTabsModule } from "@angular/material/tabs";
 import { MatButtonModule } from "@angular/material/button";
 import { MatDividerModule } from "@angular/material/divider";
 import { MatListModule } from "@angular/material/list";
+import { MatToolbarModule } from '@angular/material/toolbar';
+import { MatIconModule } from '@angular/material/icon';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
 
 import { FlexLayoutModule } from "@angular/flex-layout";
+import { FormsModule, ReactiveFormsModule } from "@angular/forms";
+import { LoginComponent } from "./pages/login/login.component";
+import { RegisterComponent } from "./pages/register/register.component";
+import { NgToastModule } from 'ng-angular-popup';
+import { provideFirebaseApp } from "@angular/fire/app";
+import { initializeApp } from "firebase/app";
+import { provideAuth, getAuth } from '@angular/fire/auth';
+
+
 
 
 @NgModule({
-  declarations: [AppComponent, EsriMapComponent],
+  declarations: [AppComponent, EsriMapComponent, LoginComponent, RegisterComponent],
   imports: [
     BrowserModule,
     AppRoutingModule,
@@ -32,7 +45,14 @@ import { FlexLayoutModule } from "@angular/flex-layout";
     MatDividerModule,
     MatListModule,
     FlexLayoutModule,
-    AngularFireModule.initializeApp(environment.firebase, "AngularDemoArcGIS"),
+    MatToolbarModule,
+    MatIconModule,
+    MatFormFieldModule,
+    MatInputModule,
+    ReactiveFormsModule,
+    FormsModule,
+    NgToastModule,
+    AngularFireModule.initializeApp(environment.firebase),
     AngularFireDatabaseModule
   ],
   providers: [

@@ -1,9 +1,28 @@
-<nav mat-tab-nav-bar [tabPanel]="tabPanel">
+<!-- <nav mat-tab-nav-bar [tabPanel]="tabPanel">
   <a mat-tab-link *ngFor="let tab of tabs" (click)="activeTab = tab.link" [active]="activeTab == tab.link"
     [routerLink]="tab.link">{{tab.name}}</a>
 </nav>
-<mat-tab-nav-panel #tabPanel></mat-tab-nav-panel>
+<mat-tab-nav-panel #tabPanel></mat-tab-nav-panel> -->
+
+<mat-toolbar color = "primary">
+  Health Consultant
+  <button mat-button routerLink="home">
+    Home
+  </button>
+  <button mat-button routerLink="map" *ngIf="this.firebaseService.isAuthenticated()">
+    Map
+  </button>
+  <button mat-button routerLink="login" *ngIf="!this.firebaseService.isAuthenticated()">
+    <mat-icon>login</mat-icon>
+    Login
+  </button>
+  <button mat-button routerLink="home" *ngIf="this.firebaseService.isAuthenticated()" (click) = "this.firebaseService.logout()">
+    <mat-icon>logout</mat-icon>
+    Logout
+  </button>
+</mat-toolbar>
 
 <div class="container">
   <router-outlet></router-outlet>
 </div>
+<lib-ng-toast></lib-ng-toast>
