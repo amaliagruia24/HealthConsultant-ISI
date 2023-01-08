@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { AngularFireAuth } from '@angular/fire/compat/auth';
 import { AngularFireDatabase } from '@angular/fire/compat/database';
 import { Observable } from 'rxjs';
 
@@ -14,7 +15,36 @@ export class FirebaseService {
     listFeed: Observable<any[]>;
     objFeed: Observable<any>;
 
-    constructor(public db: AngularFireDatabase) {
+    isLoggedIn = false;
+    constructor(public db: AngularFireDatabase, public firebaseAuth: AngularFireAuth) {
+
+    }
+
+    async login(email: string, password: string) {
+        await this.firebaseAuth.signInWithEmailAndPassword(email, password).then(res => {
+            this.isLoggedIn = true
+            localStorage.setItem('user', JSON.stringify(res.user))
+        })
+    }
+
+    async register(email: string, password: string) {
+        await this.firebaseAuth.createUserWithEmailAndPassword(email, password).then(res => {
+            this.isLoggedIn = true
+            console.log(this.isLoggedIn)
+            localStorage.setItem('user', JSON.stringify(res.user))
+        })
+    }
+
+    public isAuthenticated(): boolean{
+        if (localStorage.getItem('user') !== null) 
+            return true;
+        else 
+            return false;
+    }
+
+    public logout() {
+        this.firebaseAuth.signOut()
+        localStorage.removeItem('user')
 
     }
 

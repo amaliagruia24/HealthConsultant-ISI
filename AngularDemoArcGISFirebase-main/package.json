@@ -27,6 +27,8 @@
     "esri-loader": "^3.3.0",
     "firebase": "^9.0.0",
     "minimist": "^1.2.5",
+    "ng-angular-popup": "^0.2.0",
+    "ngx-toastr": "^16.0.2",
     "rxjs": "~7.5.0",
     "tslib": "^2.3.0",
     "zone.js": "~0.11.4"
