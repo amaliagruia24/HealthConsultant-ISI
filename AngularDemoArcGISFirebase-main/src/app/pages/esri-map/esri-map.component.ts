@@ -45,6 +45,7 @@ export class EsriMapComponent implements OnInit, OnDestroy {
   _FeatureSet;
   _Point;
   _locator;
+  _Track;
 
   // Instances
   map: esri.Map;
@@ -79,7 +80,7 @@ export class EsriMapComponent implements OnInit, OnDestroy {
       setDefaultOptions({ css: true });
 
       // Load the modules for the ArcGIS API for JavaScript
-      const [esriConfig, Map, MapView, FeatureLayer, Graphic, Point, GraphicsLayer, locator,  route, RouteParameters, FeatureSet] = await loadModules([
+      const [esriConfig, Map, MapView, FeatureLayer, Graphic, Point, GraphicsLayer, locator,  route, RouteParameters, FeatureSet, Track] = await loadModules([
         "esri/config",
         "esri/Map",
         "esri/views/MapView",
@@ -90,7 +91,8 @@ export class EsriMapComponent implements OnInit, OnDestroy {
         "esri/rest/locator",
         "esri/rest/route",
         "esri/rest/support/RouteParameters",
-        "esri/rest/support/FeatureSet"
+        "esri/rest/support/FeatureSet",
+        "esri/widgets/Track"
       ]);
 
       esriConfig.apiKey = "AAPK9343168a6c86413ba98112f5352428fcGnGC-wp9ZqKGNe2Fd6CkQdpzfk3v1965PmDiIFqOXpovBlvEll7Q246p45ANQb_z";
@@ -105,6 +107,7 @@ export class EsriMapComponent implements OnInit, OnDestroy {
       this._RouteParameters = RouteParameters;
       this._FeatureSet = FeatureSet;
       this._Point = Point;
+      this._Track = Track;
 
       // Configure the Map
       const mapProperties = {
@@ -139,6 +142,23 @@ export class EsriMapComponent implements OnInit, OnDestroy {
       await this.view.when(); // wait for map to load
       console.log("ArcGIS map loaded");
 
+      const track = new Track({
+        view: this.view,
+        graphic: new Graphic({
+          symbol: {
+            type: "simple-marker",
+            size: "12px",
+            color: "green",
+            outline: {
+              color: "#efefef",
+              width: "1.5px"
+            }
+          }
+        }),
+        useHeadingEnabled: false
+      });
+      this.view.ui.add(track, "top-left");
+      this.view.center = track.start();
       this.view.when(()=>{
         this.findPlaces(this.view.center);
       });
@@ -153,8 +173,11 @@ export class EsriMapComponent implements OnInit, OnDestroy {
 
   findPlaces(pt) {
     const geocodingServiceUrl = "http://geocode-api.arcgis.com/arcgis/rest/services/World/GeocodeServer";
- 
+    
+    // var address = {"Single Line Input": "Bucharest"};
+
     const params = {
+      // address : address,
       categories: ["medical clinic", "hospital"],
       location: pt, 
       outFields: ["PlaceName","Place_addr"]
