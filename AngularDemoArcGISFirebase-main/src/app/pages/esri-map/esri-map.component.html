@@ -2,19 +2,26 @@
 
 <div fxLayout="row">
     <div fxFlex="20%" fxLayout="column">
-        <mat-list>
-            <mat-list-item>
-                <span class="label">Firebase</span>
-            </mat-list-item>
-            <mat-divider></mat-divider>
-            <mat-list-item>
-                <button mat-button mat-button color="primary" class="full-w" (click)="connectFirebase()">Connect</button>
-            </mat-list-item>
-            <mat-divider></mat-divider>
-            <mat-list-item>
-                <button mat-button mat-button color="primary" class="full-w" (click)="addPointItem()">Add item</button>
-            </mat-list-item>
-        </mat-list>
+        <h1>Cauta un simptom:</h1>
+        <mat-card class="card-wrapper">
+            <multi-select-autocomplete
+              placeholder="Alege sau scrie un simptom..."
+              key="options"
+              [data]="selectOptions"
+              (result)="selectChange($event)">
+            </multi-select-autocomplete>
+          </mat-card>
+        
+          <mat-card class="card-wrapper answers">
+            <ng-container *ngIf="cardValue.options.length === 0">
+              Nu ai inca optiuni selectate
+            </ng-container>
+            <ng-container *ngIf="cardValue.options.length > 0">
+              <div *ngFor="let option of cardValue.options">
+                {{ option }}
+              </div>
+            </ng-container>
+          </mat-card>
     </div>
     <div fxFlex="80%">
         <div #mapViewNode></div>

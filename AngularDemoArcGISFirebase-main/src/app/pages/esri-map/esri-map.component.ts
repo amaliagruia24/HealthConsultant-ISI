@@ -16,13 +16,20 @@ import {
   OnInit,
   ViewChild,
   ElementRef,
-  OnDestroy
+  OnDestroy,
+  Output,
+  EventEmitter,
+  Input
 } from "@angular/core";
+import { FormControl } from "@angular/forms";
 import { setDefaultOptions, loadModules } from "esri-loader";
-import { Subscription } from "rxjs";
+import { map, Observable, startWith, Subscription } from "rxjs";
 import { FirebaseService, ITestItem } from "src/app/services/database/firebase";
+import { MultiselectAutocompleteComponent } from "../multi-select-autocomplete/multi-select-autocomplete.component";
 import { FirebaseMockService } from "src/app/services/database/firebase-mock";
+import {coordinates} from "./locations-data";
 import esri = __esri; // Esri TypeScript Types
+
 
 @Component({
   selector: "app-esri-map",
@@ -68,10 +75,23 @@ export class EsriMapComponent implements OnInit, OnDestroy {
   subscriptionList: Subscription;
   subscriptionObj: Subscription;
 
+  cardValue: any = {
+    options: []
+  };
+
+  selectOptions: Array<string> = [
+    'durere de cap', 'greata', 'ameteli', 'puls mare', 'temperatura', 'nas infundat', 'lala', 'lalala', 'alla', 'plm'
+  ];
+
+  hospitals: Map<string,coordinates> = new Map<string,coordinates>;
+
   constructor(
     private fbs: FirebaseService
    // private fbs: FirebaseMockService
-  ) { }
+   
+  ) { 
+
+  }
 
   async initializeMap() {
     try {
@@ -184,6 +204,13 @@ export class EsriMapComponent implements OnInit, OnDestroy {
     }
     this._Locator.addressToLocations(geocodingServiceUrl, params).then((results)=> {
       this.showResults(results);
+      results.forEach(result => {
+        this.hospitals.set(String(result.attributes.PlaceName), new coordinates(result.location.x, result.location.y))
+      });
+      // this.hospitals.forEach((value: coordinates, key: string) =>{
+      //   console.log(String(key+ " "  +value.x+ " " +value.y+"parcurgere map"));
+      // })
+      // console.log("am parcurs map")
     });
  
   }
@@ -351,4 +378,13 @@ export class EsriMapComponent implements OnInit, OnDestroy {
     this.stopTimer();
     this.disconnectFirebase();
   }
+
+  selectChange = (event: any) => {
+    const key: string = event.key;
+    this.cardValue[key] = [ ...event.data ];
+
+    console.log(this.cardValue.options);
+  };
+
+
 }

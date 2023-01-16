@@ -21,6 +21,9 @@ import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { MatCard, MatCardModule } from '@angular/material/card';
+import { MatChipsModule } from '@angular/material/chips';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 
 import { FlexLayoutModule } from "@angular/flex-layout";
 import { FormsModule, ReactiveFormsModule } from "@angular/forms";
@@ -30,12 +33,14 @@ import { NgToastModule } from 'ng-angular-popup';
 import { provideFirebaseApp } from "@angular/fire/app";
 import { initializeApp } from "firebase/app";
 import { provideAuth, getAuth } from '@angular/fire/auth';
+import {MatAutocompleteModule} from '@angular/material/autocomplete';
+import { MultiselectAutocompleteComponent } from "./pages/multi-select-autocomplete/multi-select-autocomplete.component";
 
 
 
 
 @NgModule({
-  declarations: [AppComponent, EsriMapComponent, LoginComponent, RegisterComponent],
+  declarations: [AppComponent, EsriMapComponent, LoginComponent, RegisterComponent, MultiselectAutocompleteComponent],
   imports: [
     BrowserModule,
     AppRoutingModule,
@@ -52,6 +57,10 @@ import { provideAuth, getAuth } from '@angular/fire/auth';
     ReactiveFormsModule,
     FormsModule,
     NgToastModule,
+    MatAutocompleteModule,
+    MatCardModule, 
+    MatChipsModule,
+    MatCheckboxModule,
     AngularFireModule.initializeApp(environment.firebase),
     AngularFireDatabaseModule
   ],
