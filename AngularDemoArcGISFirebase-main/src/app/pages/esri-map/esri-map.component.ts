@@ -24,13 +24,14 @@ import {
 import { FormControl } from "@angular/forms";
 import { setDefaultOptions, loadModules } from "esri-loader";
 import { map, Observable, startWith, Subscription } from "rxjs";
-import { FirebaseService, ITestItem } from "src/app/services/database/firebase";
+import {FirebaseService, Hospital, ITestItem} from "src/app/services/database/firebase";
 import { MultiselectAutocompleteComponent } from "../multi-select-autocomplete/multi-select-autocomplete.component";
 import { FirebaseMockService } from "src/app/services/database/firebase-mock";
 import {coordinates} from "./locations-data";
 import esri = __esri;
 import Point = __esri.Point;
-import {set} from "@angular/fire/database"; // Esri TypeScript Types
+import {set} from "@angular/fire/database";
+import PopupTriggerActionEvent = __esri.PopupTriggerActionEvent; // Esri TypeScript Types
 
 
 @Component({
@@ -82,6 +83,7 @@ export class EsriMapComponent implements OnInit, OnDestroy {
   isConnected = false;
   subscriptionList: Subscription;
   subscriptionObj: Subscription;
+  hospitalSubscriptionList: Subscription;
 
   cardValue: any = {
     options: []
@@ -207,11 +209,12 @@ export class EsriMapComponent implements OnInit, OnDestroy {
       // address : address,
       categories: ["medical clinic", "hospital"],
       location: pt,
-      outFields: ["PlaceName","Place_addr", "Phone", "URL", "Sector", "City", "LongLabel", "ShortLabel"]
+      outFields: ["PlaceName","Place_addr", "Phone", "URL"]
     }
     this._Locator.addressToLocations(geocodingServiceUrl, params).then((results)=> {
       this.showResults(results);
       results.forEach(result => {
+        this.fbs.addHospital(String(result.attributes.PlaceName), String(result.attributes.Place_addr), result.location.x, result.location.x)
         this.hospitals.set(String(result.attributes.PlaceName), new coordinates(result.location.x, result.location.y))
       });
       // this.hospitals.forEach((value: coordinates, key: string) =>{
@@ -221,6 +224,10 @@ export class EsriMapComponent implements OnInit, OnDestroy {
       console.log("attributes: " + results[0].attributes.toString());
     });
 
+  }
+
+  addReview () {
+    console.log("review");
   }
 
   addRouter() {
@@ -351,6 +358,10 @@ export class EsriMapComponent implements OnInit, OnDestroy {
   }
 
   showResults(results) {
+    const addReview = {
+      title: 'Review me!',
+      id: "add-review"
+    }
     this.view.popup.close();
     this.view.graphics.removeAll();
     results.forEach((result)=>{
@@ -373,6 +384,7 @@ export class EsriMapComponent implements OnInit, OnDestroy {
               + result.location.x.toFixed(5) + ", " + result.location.y.toFixed(5)
               + "<br><br>" + "Număr de telefon: " + "{Phone}" +"<br><br>"
               + "URL: " + "<a href=\"{URL}\">{URL}</a>" + "<br><br>",
+            actions: [addReview]
           }
         }));
     });
@@ -382,6 +394,13 @@ export class EsriMapComponent implements OnInit, OnDestroy {
         features: [g],
         location: g.geometry
       });
+      this.view.popup.on("trigger-action", (event:PopupTriggerActionEvent) => {
+        if(event.action.id === "add-review") {
+          console.log(event);
+          this.addReview();
+        }
+      })
+
     }
   }
 
@@ -474,13 +493,12 @@ export class EsriMapComponent implements OnInit, OnDestroy {
     this.fbs.connectToDatabase();
     this.subscriptionList = this.fbs.getChangeFeedList().subscribe((items: ITestItem[]) => {
       console.log("got new items from list: ", items);
-      this.graphicsLayer.removeAll();
-      for (const item of items) {
-        this.addPoint(item.lat, item.lng, false);
-      }
     });
     this.subscriptionObj = this.fbs.getChangeFeedObj().subscribe((stat: ITestItem[]) => {
       console.log("item updated from object: ", stat);
+    });
+    this.hospitalSubscriptionList = this.fbs.getChangeFeedObj().subscribe((items: Hospital[]) => {
+      console.log("hospital updated from list: ", items);
     });
   }
 
@@ -493,16 +511,20 @@ export class EsriMapComponent implements OnInit, OnDestroy {
     if (this.subscriptionList != null) {
       this.subscriptionList.unsubscribe();
     }
+    if (this.hospitalSubscriptionList != null) {
+      this.subscriptionList.unsubscribe();
+    }
     if (this.subscriptionObj != null) {
       this.subscriptionObj.unsubscribe();
     }
   }
 
   async ngOnInit() {
+    this.connectFirebase();
     // Initialize MapView and return an instance of MapView
     console.log("initializing map");
 
-    navigator.geolocation.getCurrentPosition(pos => this.showPosition(pos));
+    await navigator.geolocation.getCurrentPosition(pos => this.showPosition(pos));
     this.initializeMap().then(() => {
       // The map has been initialized
       console.log("mapView ready: ", this.view.ready);
