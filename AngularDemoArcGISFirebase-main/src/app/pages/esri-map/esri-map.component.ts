@@ -24,11 +24,14 @@ import {
 import { FormControl } from "@angular/forms";
 import { setDefaultOptions, loadModules } from "esri-loader";
 import { map, Observable, startWith, Subscription } from "rxjs";
-import { FirebaseService, ITestItem } from "src/app/services/database/firebase";
+import {FirebaseService, Hospital, ITestItem} from "src/app/services/database/firebase";
 import { MultiselectAutocompleteComponent } from "../multi-select-autocomplete/multi-select-autocomplete.component";
 import { FirebaseMockService } from "src/app/services/database/firebase-mock";
 import {coordinates} from "./locations-data";
-import esri = __esri; // Esri TypeScript Types
+import esri = __esri;
+import Point = __esri.Point;
+import {set} from "@angular/fire/database";
+import PopupTriggerActionEvent = __esri.PopupTriggerActionEvent; // Esri TypeScript Types
 
 
 @Component({
@@ -63,17 +66,24 @@ export class EsriMapComponent implements OnInit, OnDestroy {
   // Attributes
   zoom = 10;
   center: Array<number> = [26.10300, 44.43325];
-  basemap = "streets-vector";
+  basemap = "arcgis-navigation";
   loaded = false;
   pointCoords: number[] = [26.1521, 44.4396];
   dir = 0;
   count = 0;
   timeoutHandler = null;
+  latitude = 0;
+  longitude = 0;
+  routeUrl = "https://route-api.arcgis.com/arcgis/rest/services/World/Route/NAServer/Route_World";
+  popUpLat = 0;
+  popUpLong = 0;
+
 
   // firebase sync
   isConnected = false;
   subscriptionList: Subscription;
   subscriptionObj: Subscription;
+  hospitalSubscriptionList: Subscription;
 
   cardValue: any = {
     options: []
@@ -88,8 +98,8 @@ export class EsriMapComponent implements OnInit, OnDestroy {
   constructor(
     private fbs: FirebaseService
    // private fbs: FirebaseMockService
-   
-  ) { 
+
+  ) {
 
   }
 
@@ -139,8 +149,6 @@ export class EsriMapComponent implements OnInit, OnDestroy {
       this.addFeatureLayers();
       this.addGraphicLayers();
 
-      // this.addPoint(this.pointCoords[1], this.pointCoords[0], true);
-
 
       // Initialize the MapView
       const mapViewProperties = {
@@ -178,11 +186,12 @@ export class EsriMapComponent implements OnInit, OnDestroy {
         useHeadingEnabled: false
       });
       this.view.ui.add(track, "top-left");
-      this.view.center = track.start();
-      this.view.when(()=>{
+      this.view.center.latitude = this.latitude;
+      this.view.center.longitude = this.longitude;
+      await this.view.when(() => {
         this.findPlaces(this.view.center);
       });
-      // this.addRouter();
+      this.addRouter();
 
       console.log("Map center: " + this.view.center.latitude + ", " + this.view.center.longitude);
       return this.view;
@@ -193,58 +202,206 @@ export class EsriMapComponent implements OnInit, OnDestroy {
 
   findPlaces(pt) {
     const geocodingServiceUrl = "http://geocode-api.arcgis.com/arcgis/rest/services/World/GeocodeServer";
-    
+
     // var address = {"Single Line Input": "Bucharest"};
 
     const params = {
       // address : address,
       categories: ["medical clinic", "hospital"],
-      location: pt, 
-      outFields: ["PlaceName","Place_addr"]
+      location: pt,
+      outFields: ["PlaceName","Place_addr", "Phone", "URL"]
     }
     this._Locator.addressToLocations(geocodingServiceUrl, params).then((results)=> {
       this.showResults(results);
       results.forEach(result => {
+        this.fbs.addHospital(String(result.attributes.PlaceName), String(result.attributes.Place_addr), result.location.x, result.location.x)
         this.hospitals.set(String(result.attributes.PlaceName), new coordinates(result.location.x, result.location.y))
       });
       // this.hospitals.forEach((value: coordinates, key: string) =>{
       //   console.log(String(key+ " "  +value.x+ " " +value.y+"parcurgere map"));
       // })
       // console.log("am parcurs map")
+      console.log("attributes: " + results[0].attributes.toString());
     });
- 
+
+  }
+
+  addReview () {
+    console.log("review");
+  }
+
+  addRouter() {
+    const routeUrl = "https://route-api.arcgis.com/arcgis/rest/services/World/Route/NAServer/Route_World";
+
+
+    this.view.on("double-click", (event) => {
+      if (this.view.popup.location.longitude !== event.mapPoint.longitude ||
+        this.view.popup.location.longitude !== event.mapPoint.longitude) {
+        this.view.popup.close();
+      }
+      console.log("point clicked: ", event.mapPoint.latitude, event.mapPoint.longitude);
+      this.popUpLat = event.mapPoint.latitude;
+      this.popUpLong = event.mapPoint.longitude;
+      this.view.graphics.removeAll();
+      addGraphic("origin", this.latitude, this.longitude);
+      addGraphic("destination", this.popUpLat, this.popUpLong);
+      getRoute();
+    });
+
+    var addGraphic = (type: any, lat: number, lng: number) => {
+      const point = { // Create a point
+        type: "point",
+        longitude: lng,
+        latitude: lat
+      };
+      const graphic = new this._Graphic({
+        symbol: {
+          type: "simple-marker",
+          color: (type === "origin") ? "white" : "black",
+          size: "8px"
+        } as any,
+        geometry: point
+      });
+      this.view.graphics.add(graphic);
+    }
+
+    var getRoute = () => {
+      const routeParams = new this._RouteParameters({
+        stops: new this._FeatureSet({
+          features: this.view.graphics.toArray()
+        }),
+        returnDirections: true
+      });
+
+      this._Route.solve(routeUrl, routeParams).then((data: any) => {
+        for (let result of data.routeResults) {
+          result.route.symbol = {
+            type: "simple-line",
+            color: [5, 150, 255],
+            width: 3
+          };
+          this.view.graphics.add(result.route);
+        }
+
+        // Display directions
+        if (data.routeResults.length > 0) {
+          const directions: any = document.createElement("ol");
+          directions.classList = "esri-widget esri-widget--panel esri-directions__scroller";
+          directions.style.marginTop = "0";
+          directions.style.padding = "15px 15px 15px 30px";
+
+          var closeRoute = () => {
+            this.view.graphics.removeAll();
+            this.view.ui.remove(button);
+            this.view.ui.empty("top-right");
+            this.view.when(() => {
+              this.findPlaces(this.view.center);
+            });
+          }
+          var button = document.createElement('button')
+          button.innerHTML = 'Exit';
+          button.style.padding = "5px 100px 5px 100px";
+          button.onclick = () => {
+            closeRoute()
+          }
+
+          directions.appendChild(button);
+
+          const features = data.routeResults[0].directions.features;
+
+          let sum = 0;
+          // Show each direction
+          features.forEach((result: any, i: any) => {
+            sum += parseFloat(result.attributes.length);
+            const direction = document.createElement("li");
+            direction.innerHTML = result.attributes.text + " (" + result.attributes.length + " miles)";
+            directions.appendChild(direction);
+          });
+
+          sum = sum * 1.609344;
+          console.log("dist (km) = ", sum);
+
+
+          this.view.ui.empty("top-right");
+          this.view.ui.add(directions, "top-right");
+
+        }
+
+      }).catch((error: any) => {
+        console.log(error);
+      });
+    }
+  }
+
+  getLocation() {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(pos => this.showPosition(pos));
+    } else {
+      console.log("Geolocation is not supported by this browser.");
+    }
+  }
+
+  showPosition(position) {
+    const crd = position.coords;
+
+
+    console.log("Your current position is:");
+    console.log(`Latitude : ${crd.latitude}`);
+    console.log(`Longitude: ${crd.longitude}`);
+    console.log(`More or less ${crd.accuracy} meters.`);
+
+    this.longitude = crd.longitude;
+    this.latitude = crd.latitude;
+
+    console.log(`TH Latitude : ${crd.latitude}`);
+    console.log(`TH Longitude: ${crd.longitude}`);
   }
 
   showResults(results) {
+    const addReview = {
+      title: 'Review me!',
+      id: "add-review"
+    }
     this.view.popup.close();
-      this.view.graphics.removeAll();
-      results.forEach((result)=>{
-        this.view.graphics.add(
-          new this._Graphic({
-            attributes: result.attributes,
-            geometry: result.location,
-            symbol: {
-              type: "simple-marker",
-              color: "orange",
-              size: "10px",
-              outline: {
-                color: "#ffffff",
-                width: "2px"
-              }
-            },
-            popupTemplate: {
-              title: "{PlaceName}",
-              content: "{Place_addr}" + "<br><br>" + result.location.x.toFixed(5) + "," + result.location.y.toFixed(5)
+    this.view.graphics.removeAll();
+    results.forEach((result)=>{
+      this.view.graphics.add(
+        new this._Graphic({
+          attributes: result.attributes,
+          geometry: result.location,
+          symbol: {
+            type: "simple-marker",
+            color: "orange",
+            size: "10px",
+            outline: {
+              color: "#ffffff",
+              width: "2px"
             }
-          }));
+          },
+          popupTemplate: {
+            title: "{PlaceName}",
+            content: "Adresa: "+ "{Place_addr}" + "<br><br>" + "Coordonate: "
+              + result.location.x.toFixed(5) + ", " + result.location.y.toFixed(5)
+              + "<br><br>" + "Număr de telefon: " + "{Phone}" +"<br><br>"
+              + "URL: " + "<a href=\"{URL}\">{URL}</a>" + "<br><br>",
+            actions: [addReview]
+          }
+        }));
+    });
+    if (results.length) {
+      const g = this.view.graphics.getItemAt(0);
+      this.view.popup.open({
+        features: [g],
+        location: g.geometry
       });
-      if (results.length) {
-        const g = this.view.graphics.getItemAt(0);
-        this.view.popup.open({
-          features: [g],
-          location: g.geometry
-        });
-      }
+      this.view.popup.on("trigger-action", (event:PopupTriggerActionEvent) => {
+        if(event.action.id === "add-review") {
+          console.log(event);
+          this.addReview();
+        }
+      })
+
+    }
   }
 
   addGraphicLayers() {
@@ -305,6 +462,7 @@ export class EsriMapComponent implements OnInit, OnDestroy {
     }
   }
 
+
   removePoint() {
     if (this.pointGraphic != null) {
       this.graphicsLayer.remove(this.pointGraphic);
@@ -335,13 +493,12 @@ export class EsriMapComponent implements OnInit, OnDestroy {
     this.fbs.connectToDatabase();
     this.subscriptionList = this.fbs.getChangeFeedList().subscribe((items: ITestItem[]) => {
       console.log("got new items from list: ", items);
-      this.graphicsLayer.removeAll();
-      for (const item of items) {
-        this.addPoint(item.lat, item.lng, false);
-      }
     });
     this.subscriptionObj = this.fbs.getChangeFeedObj().subscribe((stat: ITestItem[]) => {
       console.log("item updated from object: ", stat);
+    });
+    this.hospitalSubscriptionList = this.fbs.getChangeFeedObj().subscribe((items: Hospital[]) => {
+      console.log("hospital updated from list: ", items);
     });
   }
 
@@ -354,14 +511,20 @@ export class EsriMapComponent implements OnInit, OnDestroy {
     if (this.subscriptionList != null) {
       this.subscriptionList.unsubscribe();
     }
+    if (this.hospitalSubscriptionList != null) {
+      this.subscriptionList.unsubscribe();
+    }
     if (this.subscriptionObj != null) {
       this.subscriptionObj.unsubscribe();
     }
   }
 
-  ngOnInit() {
+  async ngOnInit() {
+    this.connectFirebase();
     // Initialize MapView and return an instance of MapView
     console.log("initializing map");
+
+    await navigator.geolocation.getCurrentPosition(pos => this.showPosition(pos));
     this.initializeMap().then(() => {
       // The map has been initialized
       console.log("mapView ready: ", this.view.ready);
